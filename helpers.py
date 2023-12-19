@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import RK23,RK45 # NOTE: this is the Runge-Kutta 4(5) integrator, paper uses 4 th order, this should be more accurate
 import tqdm
+import numpy as np
 # surge velocity functions
 AMPLITUDE = 0.3
 # PERIOD    = 1 # paper states between 1 and 6 sec
@@ -64,10 +65,10 @@ class DWDT:
         self.K2 = 6.96e-4
         self.RHO = 1.225
         self.PI = np.pi
-        self.R = 63 
-        self.U1 = 11.4 
-        self.dt_max = period/1e6 # paper states 0.001T
-        self.t_max = 4*period
+        self.R = 1.17/2 # ipv 63 
+        self.U1 = 7.8 # 11.4 
+        self.dt_max = period/1e3 # paper states 0.001T
+        self.t_max = 10*period
         self.period = period
         self.surge_function = surge_function
 
@@ -91,10 +92,11 @@ class DWDT:
             derivative of the angular velocity
 
         '''
+        # print('in compute:' ,w)
         factor = 1/self.J+self.K2
         term1 = -self.K0
         term2 = -self.K1*w
-        term3 = 0.5*self.RHO*np.pi*self.R**2*(self.U1-self.surge_function(t,self.period))**3/w*cp0(self.lam(t,w))
+        term3 = (0.5*self.RHO*np.pi*self.R**2)*(self.U1-self.surge_function(t,self.period))**3/w*cp0(self.lam(t,w))
 
         return factor*(term1+term2+term3)
                          
@@ -109,8 +111,9 @@ class DWDT:
             t: time array
             w: angular velocity array
         '''
+        # print(self.t_max)
         # set up the ODE solver using parameters from the paper:
-        solver = RK45(self.compute_dwdt,t0,[w0],t_bound = self.t_max,max_step=self.dt_max,atol=1,rtol=1e-1)
+        solver = RK45(self.compute_dwdt,t0,[w0],t_bound = self.t_max,max_step=self.dt_max,atol=1e-5)
         # initialize objects to store the output
         output_omega = []
         output_t = []
@@ -119,11 +122,12 @@ class DWDT:
         # run until integration is complete
         while solver.status == 'running':
             # take an integration step
-            print('step size:',solver.step_size)
-            print(solver.t)
+            # print('step size:',solver.step_size)
+            # print(solver.t)
             solver.step()
             output_t.append(solver.t)
             output_omega.append(solver.y[0])
+            # print('from solver:', solver.y)
                 # progress_bar.update(1)
 
         # if log write to txt file
@@ -143,7 +147,9 @@ def time_averaged(times, values):
     Returns:
         time averaged value
     '''
+    # return np.mean(values)
     return np.trapz(values,times)/(times[-1]-times[0])
+
 
 if __name__ == '__main__':
     pass
